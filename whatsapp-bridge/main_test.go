@@ -2487,6 +2487,35 @@ func TestResolveDeviceName(t *testing.T) {
 	}
 }
 
+func TestResolveBridgeHost(t *testing.T) {
+	cases := []struct {
+		name string
+		set  bool
+		env  string
+		want string
+	}{
+		{name: "unset keeps default", set: false, want: defaultBridgeHost},
+		{name: "empty keeps default", set: true, env: "", want: defaultBridgeHost},
+		{name: "whitespace only keeps default", set: true, env: "   ", want: defaultBridgeHost},
+		{name: "plain value", set: true, env: "0.0.0.0", want: "0.0.0.0"},
+		{name: "surrounding whitespace trimmed", set: true, env: "  0.0.0.0  ", want: "0.0.0.0"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.set {
+				t.Setenv("WHATSAPP_BRIDGE_HOST", tc.env)
+			} else {
+				// t.Setenv restores on cleanup; unset explicitly for this case.
+				_ = os.Unsetenv("WHATSAPP_BRIDGE_HOST")
+			}
+			if got := resolveBridgeHost(); got != tc.want {
+				t.Fatalf("resolveBridgeHost() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 // TestResolveMentionJIDs verifies mapping of mention entries to the JID
 // strings placed in ContextInfo.MentionedJID, including the dual phone+LID
 // form for LID-addressed groups.

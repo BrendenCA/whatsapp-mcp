@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -114,6 +117,62 @@ func TestWithAuthAcceptsValidRequest(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestExtraAllowedHosts(t *testing.T) {
+	cases := []struct {
+		name string
+		set  bool
+		env  string
+		want []string
+	}{
+		{name: "unset returns nil", set: false, want: nil},
+		{name: "empty returns nil", set: true, env: "", want: nil},
+		{name: "whitespace only returns nil", set: true, env: "   ", want: nil},
+		{name: "single value", set: true, env: "whatsapp-bridge:8080", want: []string{"whatsapp-bridge:8080"}},
+		{
+			name: "multiple values trimmed and lower-cased",
+			set:  true,
+			env:  " Whatsapp-Bridge:8080 , internal.example:8080 ",
+			want: []string{"whatsapp-bridge:8080", "internal.example:8080"},
+		},
+		{
+			name: "blank entries dropped",
+			set:  true,
+			env:  "whatsapp-bridge:8080,,internal.example:8080",
+			want: []string{"whatsapp-bridge:8080", "internal.example:8080"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.set {
+				t.Setenv("WHATSAPP_BRIDGE_ALLOWED_HOSTS", tc.env)
+			} else {
+				_ = os.Unsetenv("WHATSAPP_BRIDGE_ALLOWED_HOSTS")
+			}
+			if got := extraAllowedHosts(); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("extraAllowedHosts() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestBuildAllowedHostsIncludesExtras(t *testing.T) {
+	t.Setenv("WHATSAPP_BRIDGE_ALLOWED_HOSTS", "whatsapp-bridge:8080")
+
+	allowed := buildAllowedHosts(8080)
+
+	var got []string
+	for h := range allowed {
+		got = append(got, h)
+	}
+	sort.Strings(got)
+
+	want := []string{"127.0.0.1:8080", "[::1]:8080", "localhost:8080", "whatsapp-bridge:8080"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildAllowedHosts(8080) hosts = %v, want %v", got, want)
 	}
 }
 

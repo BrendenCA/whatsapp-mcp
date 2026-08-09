@@ -1,7 +1,9 @@
 """Tests for MCP transport selection."""
 
 import pytest
+from mcp.server.fastmcp import FastMCP
 
+import main
 from mcp_config import resolve_host, resolve_port, resolve_transport
 
 
@@ -76,3 +78,24 @@ class TestResolvePort:
         for value in ("0", "-1", "65536"):
             with pytest.raises(ValueError, match="Invalid WHATSAPP_MCP_PORT"):
                 resolve_port(value)
+
+
+class TestApplyHostSettings:
+    """Tests for apply_host_settings()."""
+
+    @pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1"])
+    def test_loopback_host_keeps_transport_security(self, host):
+        server = FastMCP("whatsapp")
+        main.apply_host_settings(server, host, 8000)
+        assert server.settings.host == host
+        assert server.settings.port == 8000
+        assert server.settings.transport_security is not None
+        assert server.settings.transport_security.enable_dns_rebinding_protection is True
+
+    @pytest.mark.parametrize("host", ["0.0.0.0", "999.888.777.666", "internal-proxy.example"])
+    def test_non_loopback_host_clears_transport_security(self, host):
+        server = FastMCP("whatsapp")
+        main.apply_host_settings(server, host, 9000)
+        assert server.settings.host == host
+        assert server.settings.port == 9000
+        assert server.settings.transport_security is None

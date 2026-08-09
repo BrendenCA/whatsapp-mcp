@@ -1,0 +1,9 @@
+.git
+.github
+**/*.md
+whatsapp-bridge/store
+whatsapp-mcp-server/.venv
+whatsapp-mcp-server/__pycache__
+whatsapp-mcp-server/tests/__pycache__
+**/__pycache__
+**/*.pyc
