@@ -173,6 +173,7 @@ def list_messages(
     context_before: int = 1,
     context_after: int = 1,
     sort_by: str = "newest",
+    include_archived: bool = False,
 ) -> list[dict[str, Any]]:
     """Get WhatsApp messages matching specified criteria with optional context.
 
@@ -190,6 +191,8 @@ def list_messages(
         context_before: Messages to include before each match (default 1)
         context_after: Messages to include after each match (default 1)
         sort_by: "newest" (default, most recent first) or "oldest" (chronological)
+        include_archived: Include messages from chats in WhatsApp's Archived folder
+            (default False). Not applied when chat_jid is given.
     """
     # Cap limit at 500 to prevent excessive queries
     limit = min(limit, 500)
@@ -205,6 +208,7 @@ def list_messages(
         context_before=context_before,
         context_after=context_after,
         sort_by=sort_by,
+        include_archived=include_archived,
     )
     return messages
 
@@ -216,6 +220,7 @@ def list_chats(
     page: int = 0,
     include_last_message: bool = True,
     sort_by: str = "last_active",
+    include_archived: bool = False,
 ) -> list[dict[str, Any]]:
     """Get WhatsApp chats matching specified criteria.
 
@@ -225,11 +230,17 @@ def list_chats(
         page: Page number for pagination (default 0)
         include_last_message: Include the last message in each chat (default True)
         sort_by: "last_active" (default, most recent first) or "name" (alphabetical)
+        include_archived: Include chats in WhatsApp's Archived folder (default False)
     """
     # Cap limit at 200 to prevent excessive queries
     limit = min(limit, 200)
     chats = whatsapp_list_chats(
-        query=query, limit=limit, page=page, include_last_message=include_last_message, sort_by=sort_by
+        query=query,
+        limit=limit,
+        page=page,
+        include_last_message=include_last_message,
+        sort_by=sort_by,
+        include_archived=include_archived,
     )
     return chats
 
