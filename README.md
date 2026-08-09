@@ -1,5 +1,39 @@
 # WhatsApp MCP Server
 
+> ### About this fork
+>
+> A fork of [verygoodplugins/whatsapp-mcp](https://github.com/verygoodplugins/whatsapp-mcp), packaged to run in containers behind a reverse proxy. Changes land on `develop`.
+>
+> **Added here**
+>
+> - `list_chats` and `list_messages` accept `include_archived`, default `false`. Chats in WhatsApp's Archived folder stay out of results unless a caller asks for them.
+> - `WHATSAPP_BRIDGE_HOST` sets the bind address of the bridge REST listener. The default stays `127.0.0.1`.
+> - `WHATSAPP_BRIDGE_ALLOWED_HOSTS` adds Host header values that the bridge accepts. The loopback values remain.
+> - The MCP server applies its host setting before it builds the HTTP app. A non-loopback bind therefore works behind a proxy.
+>
+> **Docker**
+>
+> The `Dockerfile` at the repository root builds both services from the local source. Select one with `target`:
+>
+> | Target | Service | Port |
+> |---|---|---|
+> | `bridge` | Go. Holds the WhatsApp link. Serves the REST API. | 8080 |
+> | `mcp` | Python. Serves the MCP endpoint. | 8000 |
+>
+> Run two containers, one per target. Mount one shared volume for the SQLite store: at `/app/store` for the bridge, and at the paths in `WHATSAPP_DB_PATH` and `WHATSMEOW_DB_PATH` for the MCP server. The bridge writes `.bridge-token` into that volume and the MCP server reads it, so you do not pass a token between them.
+>
+> GitHub Actions builds both targets for `linux/amd64` and `linux/arm64` on each push to `develop` or `main`. It publishes `ghcr.io/brendenca/whatsapp-mcp-bridge` and `ghcr.io/brendenca/whatsapp-mcp-server`.
+>
+> **Hosting**
+>
+> Set `WHATSAPP_MCP_TRANSPORT=http` and `WHATSAPP_MCP_HOST=0.0.0.0`. Put the MCP server behind a reverse proxy that terminates TLS.
+>
+> Keep the bridge container on a private network. Its REST API needs one client, the MCP server.
+>
+> The MCP server has no built-in authentication. Add authentication at the proxy.
+>
+> Pairing needs an interactive terminal once, because the bridge prints a QR code. The session then persists in the store volume. Back up that volume: if `whatsapp.db` is lost, you pair again.
+
 [![CI](https://github.com/verygoodplugins/whatsapp-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/verygoodplugins/whatsapp-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
