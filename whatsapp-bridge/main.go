@@ -74,6 +74,21 @@ func resolveDeviceName() string {
 	return strings.TrimSpace(os.Getenv("WHATSAPP_DEVICE_NAME"))
 }
 
+// defaultBridgeHost is the REST listener bind address used when
+// WHATSAPP_BRIDGE_HOST is unset.
+const defaultBridgeHost = "127.0.0.1"
+
+// resolveBridgeHost returns the REST listener bind address from
+// WHATSAPP_BRIDGE_HOST, trimmed of surrounding whitespace. An empty or
+// unset value returns defaultBridgeHost.
+func resolveBridgeHost() string {
+	host := strings.TrimSpace(os.Getenv("WHATSAPP_BRIDGE_HOST"))
+	if host == "" {
+		return defaultBridgeHost
+	}
+	return host
+}
+
 // Message represents a chat message for our client
 type Message struct {
 	Time      time.Time
@@ -2404,9 +2419,10 @@ func newRESTMux(client *whatsmeow.Client, messageStore *MessageStore, port int, 
 func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port int, token string, allowedMediaRoots []string) {
 	handler := newRESTMux(client, messageStore, port, token, allowedMediaRoots)
 
-	// Start the server with proper timeouts. Bind to loopback so the bridge is
-	// not reachable from the LAN; MCP clients talk to it over localhost.
-	serverAddr := fmt.Sprintf("127.0.0.1:%d", port)
+	// Start the server with proper timeouts. Binds to loopback by default so
+	// the bridge is not reachable from the LAN; set WHATSAPP_BRIDGE_HOST to
+	// bind elsewhere, such as a container network interface.
+	serverAddr := fmt.Sprintf("%s:%d", resolveBridgeHost(), port)
 	fmt.Printf("Starting REST API server on %s...\n", serverAddr)
 
 	// Create server with timeouts for stability

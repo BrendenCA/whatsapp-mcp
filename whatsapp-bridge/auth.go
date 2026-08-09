@@ -154,14 +154,38 @@ func checkBearerToken(authHeader, expected string) bool {
 	return subtle.ConstantTimeCompare([]byte(got), []byte(expected)) == 1
 }
 
-// buildAllowedHosts returns the static allow-list for a given bind port.
-// We accept the three loopback spellings (IPv4, name, IPv6) because the
-// MCP server's choice of WHATSAPP_API_URL determines which Host header the
-// underlying HTTP client emits.
+// buildAllowedHosts returns the allow-list for a given bind port: the three
+// loopback spellings (IPv4, name, IPv6), always present, plus any extra
+// values from WHATSAPP_BRIDGE_ALLOWED_HOSTS. The MCP server's choice of
+// WHATSAPP_API_URL determines which Host header the underlying HTTP client
+// emits, so a client reaching the bridge over a container or LAN hostname
+// needs that hostname added here.
 func buildAllowedHosts(port int) map[string]struct{} {
-	return map[string]struct{}{
+	allowed := map[string]struct{}{
 		fmt.Sprintf("127.0.0.1:%d", port): {},
 		fmt.Sprintf("localhost:%d", port): {},
 		fmt.Sprintf("[::1]:%d", port):     {},
 	}
+	for _, extra := range extraAllowedHosts() {
+		allowed[extra] = struct{}{}
+	}
+	return allowed
+}
+
+// extraAllowedHosts parses WHATSAPP_BRIDGE_ALLOWED_HOSTS as a comma-separated
+// list of additional Host header values, lower-cased and trimmed. Empty
+// entries are dropped. Returns nil when the env var is unset or blank.
+func extraAllowedHosts() []string {
+	raw := strings.TrimSpace(os.Getenv("WHATSAPP_BRIDGE_ALLOWED_HOSTS"))
+	if raw == "" {
+		return nil
+	}
+	var hosts []string
+	for _, part := range strings.Split(raw, ",") {
+		h := strings.ToLower(strings.TrimSpace(part))
+		if h != "" {
+			hosts = append(hosts, h)
+		}
+	}
+	return hosts
 }

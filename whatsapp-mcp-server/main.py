@@ -436,6 +436,24 @@ def shutdown_handler(signum, frame):
     sys.exit(0)
 
 
+# Hosts for which FastMCP's constructor auto-attaches a DNS-rebinding guard.
+_FASTMCP_LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+
+
+def apply_host_settings(server: FastMCP, host: str, port: int) -> None:
+    """Set a FastMCP server's host and port, syncing its transport security guard.
+
+    FastMCP attaches a loopback-only DNS-rebinding guard at construction time,
+    based on the host present then. This sets the resolved host and port on
+    an already-constructed server and clears that guard when the resolved
+    host is not one of FastMCP's loopback defaults.
+    """
+    server.settings.host = host
+    server.settings.port = port
+    if host not in _FASTMCP_LOOPBACK_HOSTS:
+        server.settings.transport_security = None
+
+
 if __name__ == "__main__":
     # Capture before any await — os.getppid() is dynamic.
     parent_pid = os.getppid()
@@ -449,8 +467,11 @@ if __name__ == "__main__":
     try:
         transport = resolve_transport(os.getenv("WHATSAPP_MCP_TRANSPORT"))
         if transport != "stdio":
-            mcp.settings.host = resolve_host(os.getenv("WHATSAPP_MCP_HOST"))
-            mcp.settings.port = resolve_port(os.getenv("WHATSAPP_MCP_PORT"))
+            apply_host_settings(
+                mcp,
+                resolve_host(os.getenv("WHATSAPP_MCP_HOST")),
+                resolve_port(os.getenv("WHATSAPP_MCP_PORT")),
+            )
             # stdout is reserved for the protocol on stdio; log startup to stderr.
             print(
                 f"WhatsApp MCP server listening on {mcp.settings.host}:{mcp.settings.port} via {transport}",

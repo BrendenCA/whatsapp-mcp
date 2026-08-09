@@ -333,6 +333,8 @@ Copy `.env.example` to `.env` and configure as needed:
 | Variable               | Default                                  | Description                                  |
 | ---------------------- | ---------------------------------------- | -------------------------------------------- |
 | `WHATSAPP_BRIDGE_PORT` | `8080`                                   | Port for Go bridge REST API                  |
+| `WHATSAPP_BRIDGE_HOST` | `127.0.0.1`                              | Bind address for the Go bridge REST API      |
+| `WHATSAPP_BRIDGE_ALLOWED_HOSTS` | (loopback only)                 | Comma-separated extra Host header values the bridge accepts, appended to the loopback spellings |
 | `WEBHOOK_URL`          | `http://localhost:8769/whatsapp/webhook` | Webhook for incoming messages                |
 | `FORWARD_SELF`         | `true`                                   | Forward messages sent by self                |
 | `WHATSAPP_DB_PATH`     | `../whatsapp-bridge/store/messages.db`   | Path to SQLite database                      |
