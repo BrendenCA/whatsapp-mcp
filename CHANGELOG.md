@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/BrendenCA/whatsapp-mcp/compare/v0.5.1...v0.6.0) (2026-08-09)
+
+
+### Features
+
+* **mcp-server:** hide archived chats from list_chats and list_messages ([3808b2d](https://github.com/BrendenCA/whatsapp-mcp/commit/3808b2d3a75e0ae7dd2e7c184e37423b3592c469))
+* **mcp-server:** hide archived chats from list_chats and list_messages ([7cbec78](https://github.com/BrendenCA/whatsapp-mcp/commit/7cbec7890f95e6b97e11070b3064ac5b22a73636))
+
+
+### Bug Fixes
+
+* apply MCP host settings after construction to sync transport security ([ca0b900](https://github.com/BrendenCA/whatsapp-mcp/commit/ca0b900bc59e7f7d82c3f24980ee0394444d0ada))
+* sync MCP transport security guard with resolved host, configurable bridge bind/allow-list, ghcr Docker publish ([02b046f](https://github.com/BrendenCA/whatsapp-mcp/commit/02b046f978f6804d844a31da012b28cce12dd265))
+
+
+### Documentation
+
+* describe this fork, its container build, and hosting ([390d86c](https://github.com/BrendenCA/whatsapp-mcp/commit/390d86cb0dbab415eaf7660535dd63c356e699e0))
+
 ## [0.5.1](https://github.com/verygoodplugins/whatsapp-mcp/compare/v0.5.0...v0.5.1) (2026-08-08)
 
 
