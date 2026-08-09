@@ -172,6 +172,7 @@ Get messages with filters, date ranges, and sorting.
 - `before_date` (optional): Messages before this date (YYYY-MM-DD)
 - `after_date` (optional): Messages after this date (YYYY-MM-DD)
 - `sort_by` (optional): "newest" or "oldest" (default "newest")
+- `include_archived` (optional): Include messages from chats in WhatsApp's Archived folder (default `false`). Not applied when `chat_jid` is given.
 
 **Natural Language Examples:**
 
@@ -280,6 +281,7 @@ List all chats with metadata.
 **Parameters:**
 
 - `limit` (optional): Number of chats (default 50, max 200)
+- `include_archived` (optional): Include chats in WhatsApp's Archived folder (default `false`)
 
 #### `get_chat`
 

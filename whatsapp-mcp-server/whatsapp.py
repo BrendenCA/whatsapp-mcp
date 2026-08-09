@@ -185,6 +185,59 @@ def _sender_aliases(value: str) -> list[str]:
     return aliases
 
 
+def _archived_chat_jids() -> set[str]:
+    """Return the JIDs of archived chats, in both their LID and phone spellings.
+
+    Reads whatsmeow_chat_settings.archived (0/1) from whatsapp.db and expands
+    each chat_jid through whatsmeow_lid_map, so an archived DM matches whether it
+    is stored as "999888777666@lid" or "15550001234@s.whatsapp.net". Returns an
+    empty set when whatsapp.db is missing or unreadable.
+    """
+    if not os.path.isfile(WHATSMEOW_DB_PATH):
+        return set()
+    jids: set[str] = set()
+    try:
+        conn = sqlite3.connect(WHATSMEOW_DB_PATH)
+        try:
+            rows = conn.execute("""
+                SELECT settings.chat_jid, by_lid.pn, by_pn.lid
+                FROM whatsmeow_chat_settings AS settings
+                LEFT JOIN whatsmeow_lid_map AS by_lid
+                    ON by_lid.lid = substr(settings.chat_jid, 1, instr(settings.chat_jid, '@') - 1)
+                LEFT JOIN whatsmeow_lid_map AS by_pn
+                    ON by_pn.pn = substr(settings.chat_jid, 1, instr(settings.chat_jid, '@') - 1)
+                WHERE settings.archived = 1
+            """).fetchall()
+        finally:
+            conn.close()
+    except sqlite3.Error as e:
+        print(f"Database error reading archived chats: {e}")
+        return set()
+
+    for chat_jid, pn, lid in rows:
+        if chat_jid:
+            jids.add(chat_jid)
+        if pn:
+            jids.add(f"{pn}@s.whatsapp.net")
+        if lid:
+            jids.add(f"{lid}@lid")
+    return jids
+
+
+def _archived_exclusion_clause(column: str) -> tuple[str, list[str]] | None:
+    """Build a "column NOT IN (...)" clause for the archived chats.
+
+    Returns None when no chats are archived.
+    """
+    archived_jids = _archived_chat_jids()
+    if not archived_jids:
+        return None
+    # One placeholder per archived JID, as in _sender_aliases.
+    ordered = sorted(archived_jids)
+    placeholders = ",".join("?" * len(ordered))
+    return f"{column} NOT IN ({placeholders})", ordered
+
+
 def _resolve_lid_to_phone(lid_or_jid: str) -> str | None:
     """Resolve a WhatsApp LID (linked device identifier) to a phone number.
 
@@ -364,6 +417,7 @@ def list_messages(
     context_before: int = 1,
     context_after: int = 1,
     sort_by: str = "newest",
+    include_archived: bool = False,
 ) -> list[dict[str, Any]]:
     """Get messages matching the specified criteria with optional context.
 
@@ -379,6 +433,8 @@ def list_messages(
         context_before: Number of messages to include before each match (default 1)
         context_after: Number of messages to include after each match (default 1)
         sort_by: Sort order - "newest" (default) or "oldest" for chronological ordering
+        include_archived: Include messages from chats archived in WhatsApp (default
+            False). Not applied when chat_jid is set.
 
     Returns:
         List of message dictionaries with id, timestamp, sender, content, etc.
@@ -429,6 +485,15 @@ def list_messages(
             # excludes Unicode matches. instr() on the raw column preserves them.
             where_clauses.append("(instr(LOWER(messages.content), LOWER(?)) > 0 OR instr(messages.content, ?) > 0)")
             params.extend([query, query])
+
+        # An explicit chat_jid already pins the result to one chat, so filtering
+        # there could only empty it.
+        if not include_archived and not chat_jid:
+            exclusion = _archived_exclusion_clause("messages.chat_jid")
+            if exclusion:
+                clause, archived_jids = exclusion
+                where_clauses.append(clause)
+                params.extend(archived_jids)
 
         if where_clauses:
             query_parts.append("WHERE " + " AND ".join(where_clauses))
@@ -600,8 +665,12 @@ def list_chats(
     page: int = 0,
     include_last_message: bool = True,
     sort_by: str = "last_active",
+    include_archived: bool = False,
 ) -> list[dict[str, Any]]:
     """Get chats matching the specified criteria.
+
+    Args:
+        include_archived: Include chats archived in WhatsApp (default False)
 
     Returns:
         List of chat dictionaries with jid, name, is_group, last_message, etc.
@@ -650,6 +719,13 @@ def list_chats(
                 "(instr(LOWER(chats.name), LOWER(?)) > 0 OR instr(chats.name, ?) > 0 OR chats.jid LIKE ?)"
             )
             params.extend([query, query, f"%{query}%"])
+
+        if not include_archived:
+            exclusion = _archived_exclusion_clause("chats.jid")
+            if exclusion:
+                clause, archived_jids = exclusion
+                where_clauses.append(clause)
+                params.extend(archived_jids)
 
         if where_clauses:
             query_parts.append("WHERE " + " AND ".join(where_clauses))

@@ -120,6 +120,7 @@ When adding a new env var: document it here, in `README.md`, and in `.env.exampl
 4. **History sync** is controlled by the *primary* device (the phone). The bridge can request more at pair time (see the `--full-history-pair` flag) or for a single chat at runtime (`POST /api/history`, see `history_ondemand.go`), but the phone has the final word.
 5. **`messages.db` is the source of truth for the MCP server.** Don't make the MCP server dependent on the bridge being up for *read* operations.
 6. **Outgoing calls are not visible to linked devices.** Don't promise features that depend on them.
+7. **Archive state is only in `whatsapp.db`.** `messages.db.chats` has no archived column: WhatsApp's Archived folder is `whatsmeow_chat_settings.archived` (0/1) keyed by `(our_jid, chat_jid)`. whatsmeow stores DM chats there under their LID while `messages.db` stores them under the phone JID, so joining the two needs `whatsmeow_lid_map` (see gotcha 1). Muted and pinned are separate columns and are not archived.
 
 ## Where to make changes
 
